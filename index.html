@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Toolkit - Timestamp & JSON Formatter</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+      font-size: 2rem;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+
+    .tool-card {
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 25px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    }
+
+    .tool-card h2 {
+      color: #333;
+      margin-bottom: 20px;
+      font-size: 1.4rem;
+      border-left: 4px solid #667eea;
+      padding-left: 15px;
+    }
+
+    .timestamp-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+    }
+
+    .timestamp-box {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .timestamp-box label {
+      display: block;
+      color: #666;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+    }
+
+    .timestamp-box .value {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #333;
+      word-break: break-all;
+    }
+
+    .timestamp-box .value.small {
+      font-size: 1.2rem;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin-top: 15px;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background: #e9ecef;
+      color: #333;
+      margin-left: 10px;
+    }
+
+    .btn-secondary:hover {
+      background: #dee2e6;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+
+    .json-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .json-section {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .json-box {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .json-box label {
+      color: #666;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+
+    textarea {
+      width: 100%;
+      height: 250px;
+      padding: 15px;
+      border: 2px solid #e9ecef;
+      border-radius: 10px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.9rem;
+      resize: vertical;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    textarea.error {
+      border-color: #dc3545;
+    }
+
+    .error-message {
+      color: #dc3545;
+      font-size: 0.85rem;
+      margin-top: 8px;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .success-message {
+      color: #28a745;
+      font-size: 0.85rem;
+      margin-top: 8px;
+      display: none;
+    }
+
+    .success-message.show {
+      display: block;
+    }
+
+    .copy-hint {
+      font-size: 0.8rem;
+      color: #888;
+      margin-top: 8px;
+    }
+
+    .convert-btn-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .footer {
+      text-align: center;
+      color: rgba(255,255,255,0.8);
+      margin-top: 30px;
+      font-size: 0.9rem;
+    }
+
+    .db-config {
+      margin-bottom: 20px;
+    }
+
+    .db-config label {
+      display: block;
+      color: #666;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+    }
+
+    .config-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .config-label {
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 5px;
+    }
+
+    .config-item input {
+      padding: 10px 12px;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+    }
+
+    .config-item input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .sql-section {
+      margin-bottom: 20px;
+    }
+
+    .sql-section label {
+      display: block;
+      color: #666;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+
+    .result-section {
+      margin-top: 20px;
+    }
+
+    .result-section label {
+      display: block;
+      color: #666;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+
+    .result-container {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 15px;
+      max-height: 400px;
+      overflow: auto;
+    }
+
+    .result-container table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    .result-container th,
+    .result-container td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .result-container th {
+      background: #e9ecef;
+      font-weight: 600;
+      color: #495057;
+      position: sticky;
+      top: 0;
+    }
+
+    .result-container tr:hover {
+      background: #e9ecef;
+    }
+
+    .empty-state {
+      color: #999;
+      text-align: center;
+      padding: 40px 0;
+    }
+
+    .result-message {
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+
+    .result-message.success {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .result-message.error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Toolkit</h1>
+
+    <div class="tool-card">
+      <h2>MySQL Query Tool</h2>
+      
+      <div class="db-config">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <label>Database Connection</label>
+          <button class="btn btn-secondary" style="margin-top: 0; padding: 6px 12px; font-size: 0.8rem;" onclick="loadConfig()">Refresh Config</button>
+        </div>
+        <div class="config-grid">
+          <div class="config-item">
+            <span class="config-label">Host</span>
+            <input type="text" id="db-host" placeholder="localhost" />
+          </div>
+          <div class="config-item">
+            <span class="config-label">Port</span>
+            <input type="number" id="db-port" placeholder="3306" />
+          </div>
+          <div class="config-item">
+            <span class="config-label">Database</span>
+            <select id="db-name" onchange="onDatabaseChange()" style="padding: 10px 12px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 0.9rem; transition: border-color 0.2s; background: white; cursor: pointer;">
+              <option value="">Select database...</option>
+            </select>
+          </div>
+          <div class="config-item">
+            <span class="config-label">Username</span>
+            <input type="text" id="db-user" placeholder="username" />
+          </div>
+          <div class="config-item">
+            <span class="config-label">Password</span>
+            <input type="password" id="db-password" placeholder="password" />
+          </div>
+        </div>
+      </div>
+
+      <div class="sql-section">
+        <label>SQL Query</label>
+        <textarea id="sql-input" placeholder="Enter SELECT query...&#10;Example: SELECT * FROM users LIMIT 10" style="height: 80px;"></textarea>
+        <div class="error-message" id="sql-error"></div>
+      </div>
+
+      <button class="btn" onclick="executeSql()">Execute Query</button>
+      <button class="btn btn-secondary" onclick="clearSql()">Clear</button>
+
+      <div class="result-section">
+        <label>Query Result</label>
+        <div id="sql-result" class="result-container">
+          <table id="result-table" style="display: none;">
+            <thead>
+              <tr id="result-header"></tr>
+            </thead>
+            <tbody id="result-body"></tbody>
+          </table>
+          <div id="result-empty" class="empty-state">Enter SQL query and execute</div>
+          <div id="result-message" class="result-message"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tool-card">
+      <h2>JSON Formatter</h2>
+      <div class="json-section">
+        <div class="json-box">
+          <label>Input JSON</label>
+          <textarea id="json-input" placeholder="Enter JSON data..."></textarea>
+          <div class="error-message" id="json-error"></div>
+        </div>
+        <div class="json-box">
+          <label>Output</label>
+          <textarea id="json-output" placeholder="Formatted JSON will appear here..." readonly></textarea>
+          <div class="success-message" id="json-success">Operation successful!</div>
+        </div>
+      </div>
+      <div class="convert-btn-group">
+        <button class="btn" onclick="formatJson()">Format JSON</button>
+        <button class="btn btn-secondary" onclick="minifyJson()">Minify JSON</button>
+        <button class="btn btn-secondary" onclick="clearAll()">Clear</button>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <button class="btn" onclick="copyToClipboard('json-output')">Copy Result</button>
+        <span id="copy-hint" style="color: #28a745; font-size: 0.9rem; font-weight: 500; display: none;">✓ Copied</span>
+      </div>
+      <div class="copy-hint">Tip: Supports format and minify modes</div>
+    </div>
+
+    <div class="tool-card">
+      <h2>Timestamp Tool</h2>
+      <div class="timestamp-section">
+        <div class="timestamp-box">
+          <label>Current Time (ms)</label>
+          <div class="value" id="timestamp-ms">--</div>
+          <button class="btn" onclick="copyToClipboard('timestamp-ms')">Copy</button>
+        </div>
+        <div class="timestamp-box">
+          <label>Current Time (s)</label>
+          <div class="value" id="timestamp-s">--</div>
+          <button class="btn" onclick="copyToClipboard('timestamp-s')">Copy</button>
+        </div>
+        <div class="timestamp-box">
+          <label>Current DateTime</label>
+          <div class="value small" id="current-date">--</div>
+        </div>
+      </div>
+      <button class="btn" onclick="refreshTimestamp()">Refresh</button>
+    </div>
+
+    <div class="footer">
+      Timestamp & JSON Formatter & MySQL Query Tool | Java HttpServer + HTML
+    </div>
+  </div>
+
+  <script>
+    function refreshTimestamp() {
+      const now = Date.now();
+      const date = new Date();
+      
+      document.getElementById('timestamp-ms').textContent = now.toString();
+      document.getElementById('timestamp-s').textContent = Math.floor(now / 1000).toString();
+      document.getElementById('current-date').textContent = formatDate(date);
+    }
+
+    function formatDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      const ms = String(date.getMilliseconds()).padStart(3, '0');
+      
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${ms}`;
+    }
+
+    function copyToClipboard(elementId) {
+      const element = document.getElementById(elementId);
+      if (!element) return;
+
+      let textToCopy;
+      if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
+        textToCopy = element.value;
+      } else {
+        textToCopy = element.textContent;
+      }
+
+      if (!textToCopy || textToCopy === '--') {
+        alert('No content to copy');
+        return;
+      }
+
+      const tempTextarea = document.createElement('textarea');
+      tempTextarea.value = textToCopy;
+      
+      tempTextarea.style.position = 'fixed';
+      tempTextarea.style.left = '-9999px';
+      tempTextarea.style.top = '-9999px';
+      tempTextarea.style.width = '2em';
+      tempTextarea.style.height = '2em';
+      tempTextarea.style.padding = '0';
+      tempTextarea.style.border = 'none';
+      tempTextarea.style.outline = 'none';
+      tempTextarea.style.boxShadow = 'none';
+      tempTextarea.style.background = 'transparent';
+      
+      document.body.appendChild(tempTextarea);
+      
+      try {
+        tempTextarea.select();
+        tempTextarea.setSelectionRange(0, 99999);
+        const successful = document.execCommand('copy');
+        
+        if (successful) {
+          showCopySuccess(element);
+        } else {
+          alert('Copy failed, please select and copy manually');
+        }
+      } catch (err) {
+        console.error('Copy failed:', err);
+        alert('Copy failed, please select and copy manually');
+      } finally {
+        document.body.removeChild(tempTextarea);
+      }
+    }
+
+    function showCopySuccess(element) {
+      if (element.id === 'json-output') {
+        const hint = document.getElementById('copy-hint');
+        if (hint) {
+          hint.style.display = 'inline';
+          setTimeout(() => {
+            hint.style.display = 'none';
+          }, 2000);
+        }
+      } else if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
+        const hint = document.createElement('span');
+        hint.textContent = '✓ Copied';
+        hint.style.color = '#28a745';
+        hint.style.marginLeft = '10px';
+        hint.style.fontSize = '0.9rem';
+        hint.style.fontWeight = '500';
+        element.parentElement.appendChild(hint);
+        setTimeout(() => {
+          element.parentElement.removeChild(hint);
+        }, 2000);
+      } else {
+        const originalText = element.textContent;
+        element.textContent = '✓ Copied';
+        setTimeout(() => {
+          element.textContent = originalText;
+        }, 2000);
+      }
+    }
+
+    function formatJson() {
+      const input = document.getElementById('json-input').value.trim();
+      const output = document.getElementById('json-output');
+      const errorDiv = document.getElementById('json-error');
+      const successDiv = document.getElementById('json-success');
+
+      errorDiv.classList.remove('show');
+      successDiv.classList.remove('show');
+
+      if (!input) {
+        errorDiv.textContent = 'Please enter JSON data';
+        errorDiv.classList.add('show');
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(input);
+        output.value = JSON.stringify(parsed, null, 2);
+        successDiv.classList.add('show');
+        document.getElementById('json-input').classList.remove('error');
+      } catch (err) {
+        errorDiv.textContent = 'JSON format error: ' + err.message;
+        errorDiv.classList.add('show');
+        document.getElementById('json-input').classList.add('error');
+      }
+    }
+
+    function minifyJson() {
+      const input = document.getElementById('json-input').value.trim();
+      const output = document.getElementById('json-output');
+      const errorDiv = document.getElementById('json-error');
+      const successDiv = document.getElementById('json-success');
+
+      errorDiv.classList.remove('show');
+      successDiv.classList.remove('show');
+
+      if (!input) {
+        errorDiv.textContent = 'Please enter JSON data';
+        errorDiv.classList.add('show');
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(input);
+        output.value = JSON.stringify(parsed);
+        successDiv.classList.add('show');
+        document.getElementById('json-input').classList.remove('error');
+      } catch (err) {
+        errorDiv.textContent = 'JSON format error: ' + err.message;
+        errorDiv.classList.add('show');
+        document.getElementById('json-input').classList.add('error');
+      }
+    }
+
+    function clearAll() {
+      document.getElementById('json-input').value = '';
+      document.getElementById('json-output').value = '';
+      document.getElementById('json-error').classList.remove('show');
+      document.getElementById('json-success').classList.remove('show');
+      document.getElementById('json-input').classList.remove('error');
+    }
+
+    refreshTimestamp();
+    setInterval(refreshTimestamp, 1000);
+    loadConfig();
+
+    let databaseConfigs = [];
+
+    async function loadConfig() {
+      try {
+        const response = await fetch('/api/config?' + Date.now());
+        const config = await response.json();
+        
+        if (config.connection) {
+          document.getElementById('db-host').value = config.connection.host || 'localhost';
+          document.getElementById('db-port').value = config.connection.port || 3306;
+          document.getElementById('db-user').value = config.connection.username || '';
+          document.getElementById('db-password').value = config.connection.password || '';
+        }
+        
+        if (config.connection && config.connection.databases && Array.isArray(config.connection.databases)) {
+          databaseConfigs = config.connection.databases;
+          
+          const dbSelect = document.getElementById('db-name');
+          dbSelect.innerHTML = '';
+          
+          config.connection.databases.forEach((db, index) => {
+            const option = document.createElement('option');
+            option.value = db.name;
+            option.textContent = db.name;
+            if (index === 0) {
+              option.selected = true;
+            }
+            dbSelect.appendChild(option);
+          });
+          
+          if (config.connection.databases.length > 0) {
+            const firstDb = config.connection.databases[0];
+            if (firstDb.exampleSql) {
+              document.getElementById('sql-input').value = firstDb.exampleSql;
+            }
+          }
+        }
+        console.log('Config loaded:', config);
+      } catch (error) {
+        console.log('Cannot load config file, using defaults:', error);
+        document.getElementById('db-host').value = 'localhost';
+        document.getElementById('db-port').value = 3306;
+      }
+    }
+
+    function onDatabaseChange() {
+      const dbName = document.getElementById('db-name').value;
+      const selectedDb = databaseConfigs.find(db => db.name === dbName);
+      
+      if (selectedDb && selectedDb.exampleSql) {
+        document.getElementById('sql-input').value = selectedDb.exampleSql;
+      }
+    }
+
+    async function executeSql() {
+      const sql = document.getElementById('sql-input').value.trim();
+      const errorDiv = document.getElementById('sql-error');
+      const resultTable = document.getElementById('result-table');
+      const resultHeader = document.getElementById('result-header');
+      const resultBody = document.getElementById('result-body');
+      const resultEmpty = document.getElementById('result-empty');
+      const resultMessage = document.getElementById('result-message');
+
+      errorDiv.classList.remove('show');
+
+      if (!sql) {
+        errorDiv.textContent = 'Please enter SQL statement';
+        errorDiv.classList.add('show');
+        return;
+      }
+
+      if (!sql.toUpperCase().startsWith('SELECT')) {
+        errorDiv.textContent = 'Only SELECT statements are supported';
+        errorDiv.classList.add('show');
+        return;
+      }
+
+      const requestData = {
+        host: document.getElementById('db-host').value || 'localhost',
+        port: parseInt(document.getElementById('db-port').value) || 3306,
+        database: document.getElementById('db-name').value,
+        username: document.getElementById('db-user').value,
+        password: document.getElementById('db-password').value,
+        sql: sql
+      };
+
+      try {
+        const response = await fetch('/api/db/query', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestData)
+        });
+
+        const data = await response.json();
+
+        resultTable.style.display = 'none';
+        resultEmpty.style.display = 'block';
+        resultMessage.textContent = '';
+        resultMessage.className = 'result-message';
+
+        if (data.success) {
+          resultMessage.textContent = `${data.message} (${data.rowCount} rows)`;
+          resultMessage.className = 'result-message success';
+          resultMessage.style.display = 'block';
+
+          resultHeader.innerHTML = '';
+          resultBody.innerHTML = '';
+
+          if (data.columns && data.data && data.data.length > 0) {
+            data.columns.forEach(col => {
+              const th = document.createElement('th');
+              th.textContent = col;
+              resultHeader.appendChild(th);
+            });
+            
+            const actionTh = document.createElement('th');
+            actionTh.textContent = 'Action';
+            actionTh.style.width = '100px';
+            resultHeader.appendChild(actionTh);
+
+            data.data.forEach((row, index) => {
+              const tr = document.createElement('tr');
+              data.columns.forEach(col => {
+                const td = document.createElement('td');
+                td.textContent = row[col] || '';
+                tr.appendChild(td);
+              });
+              
+              const actionTd = document.createElement('td');
+              const copyBtn = document.createElement('button');
+              copyBtn.textContent = 'Copy';
+              copyBtn.className = 'btn btn-secondary';
+              copyBtn.style.padding = '4px 10px';
+              copyBtn.style.fontSize = '0.8rem';
+              copyBtn.onclick = function() {
+                copyRowAsJson(row, index);
+              };
+              actionTd.appendChild(copyBtn);
+              tr.appendChild(actionTd);
+              
+              resultBody.appendChild(tr);
+            });
+
+            resultTable.style.display = 'table';
+            resultEmpty.style.display = 'none';
+          } else {
+            resultEmpty.textContent = 'No results';
+          }
+        } else {
+          resultMessage.textContent = data.message;
+          resultMessage.className = 'result-message error';
+          resultMessage.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Query failed:', error);
+        resultMessage.textContent = 'Query failed, please ensure backend service is running: ' + error.message;
+        resultMessage.className = 'result-message error';
+        resultMessage.style.display = 'block';
+      }
+    }
+
+    function clearSql() {
+      document.getElementById('sql-input').value = '';
+      document.getElementById('sql-error').classList.remove('show');
+      document.getElementById('result-table').style.display = 'none';
+      document.getElementById('result-empty').style.display = 'block';
+      document.getElementById('result-empty').textContent = 'Enter SQL query and execute';
+      document.getElementById('result-message').textContent = '';
+      document.getElementById('result-message').className = 'result-message';
+    }
+
+    function copyRowAsJson(row, index) {
+      const jsonStr = JSON.stringify(row, null, 2);
+      
+      const tempTextarea = document.createElement('textarea');
+      tempTextarea.value = jsonStr;
+      tempTextarea.style.position = 'fixed';
+      tempTextarea.style.left = '-9999px';
+      document.body.appendChild(tempTextarea);
+      
+      try {
+        tempTextarea.select();
+        tempTextarea.setSelectionRange(0, 99999);
+        const successful = document.execCommand('copy');
+        
+        if (successful) {
+          alert('Row ' + (index + 1) + ' copied as JSON!\n\n' + jsonStr);
+        } else {
+          alert('Copy failed, please select and copy manually:\n\n' + jsonStr);
+        }
+      } catch (err) {
+        console.error('Copy failed:', err);
+        alert('Copy failed, please select and copy manually:\n\n' + jsonStr);
+      } finally {
+        document.body.removeChild(tempTextarea);
+      }
+    }
+  </script>
+</body>
+</html>

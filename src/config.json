@@ -1,0 +1,26 @@
+{
+  "server": {
+    "port": 8080
+  },
+  "connection": {
+    "host": "mysql.w3cschool.cn",
+    "port": 3306,
+    "username": "w3ctest",
+    "password": "w3c123654",
+    "databases": [
+      {
+        "name": "test_db",
+        "exampleSql": "select 1 as test"
+      },
+      {
+        "name": "ipbatdb",
+        "exampleSql": "select * from tbl_ipbat_role_inf limit 10"
+      }
+    ]
+  },
+  "http": {
+    "defaultUrl": "http://10.201.42.25:8082/mjc/webtrans/trade",
+    "defaultHeaders": "{\"Content-Type\": \"application/json\"}",
+    "defaultBody": "{\"query\": \"Hello World\", \"timestamp\": \"{{timestamp}}\", \"data\": {\"key1\": \"value1\", \"key2\": [1, 2, 3]}}"
+  }
+}

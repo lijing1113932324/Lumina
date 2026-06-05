@@ -1,6 +1,14 @@
+
+
+package src;
+
 import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpExchange;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -27,8 +35,11 @@ public class SimpleServer {
         server.createContext("/api/timestamp", new TimestampHandler());
         server.createContext("/api/json/format", new JsonFormatHandler());
         server.createContext("/api/json/minify", new JsonMinifyHandler());
-        server.createContext("/api/db/query", new DbQueryHandler());
+        server.createContext("/api/db/query", new DbQueryServer.DbQueryHandler());
         server.createContext("/api/config", new ConfigHandler());
+        server.createContext("/api/http/proxy", new HttpProxyServer.HttpProxyHandler());
+        server.createContext("/api/encrypt", new CryptoServer.EncryptHandler());
+        server.createContext("/api/decrypt", new CryptoServer.DecryptHandler());
         
         server.setExecutor(null);
         server.start();
@@ -38,20 +49,37 @@ public class SimpleServer {
         System.out.println("  Port: " + port);
         System.out.println("  Access: http://localhost:" + port);
         System.out.println("========================================");
+        
+        // 保持服务运行
+        Thread.currentThread().join();
+    }
+    
+    private static File findConfigFile() {
+        // 尝试多个位置查找配置文件
+        File[] possiblePaths = {
+            new File("config.json"),
+            new File(System.getProperty("user.dir") + File.separator + "config.json"),
+            new File("src/config.json"),
+            new File(System.getProperty("user.dir") + File.separator + "src" + File.separator + "config.json")
+        };
+        
+        for (File file : possiblePaths) {
+            if (file.exists()) {
+                return file;
+            }
+        }
+        return null;
     }
     
     private static void loadPortFromConfig() {
-        File configFile = new File("config.json");
-        if (!configFile.exists()) {
-            configFile = new File(System.getProperty("user.dir") + File.separator + "config.json");
-        }
+        File configFile = findConfigFile();
         
-        if (configFile.exists()) {
+        if (configFile != null) {
             try {
-                String content = new String(Files.readAllBytes(configFile.toPath()), StandardCharsets.UTF_8);
-                com.google.gson.JsonObject obj = new com.google.gson.JsonParser().parse(content).getAsJsonObject();
+                String content = readFileContent(configFile);
+                JsonObject obj = new JsonParser().parse(content).getAsJsonObject();
                 if (obj.has("server")) {
-                    com.google.gson.JsonObject server = obj.getAsJsonObject("server");
+                    JsonObject server = obj.getAsJsonObject("server");
                     if (server.has("port")) {
                         port = server.get("port").getAsInt();
                     }
@@ -78,14 +106,14 @@ public class SimpleServer {
             String path = exchange.getRequestURI().getPath();
             if (path.equals("/")) path = "/index.html";
             
-            File file = new File("." + path);
+            File file = new File("html" + path);
             if (!file.exists()) {
                 sendError(exchange, 404, "File not found");
                 return;
             }
             
             String contentType = getContentType(path);
-            byte[] content = Files.readAllBytes(file.toPath());
+            byte[] content = readFileBytes(file);
             
             exchange.getResponseHeaders().set("Content-Type", contentType);
             exchange.sendResponseHeaders(200, content.length);
@@ -118,9 +146,9 @@ public class SimpleServer {
         public void handle(HttpExchange exchange) throws IOException {
             String body = readBody(exchange);
             try {
-                Object obj = new com.google.gson.JsonParser().parse(body);
-                String result = new com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(obj);
-                sendJson(exchange, "{\"success\":true,\"result\":\"" + escapeJson(result) + "\",\"message\":\"Formatted successfully\"}");
+                Object obj = new JsonParser().parse(body);
+            String result = new GsonBuilder().setPrettyPrinting().create().toJson(obj);
+            sendJson(exchange, "{\"success\":true,\"result\":\"" + escapeJson(result) + "\",\"message\":\"Formatted successfully\"}");
             } catch (Exception e) {
                 sendJson(exchange, "{\"success\":false,\"result\":null,\"message\":\"JSON format error: " + e.getMessage() + "\"}");
             }
@@ -131,9 +159,9 @@ public class SimpleServer {
         public void handle(HttpExchange exchange) throws IOException {
             String body = readBody(exchange);
             try {
-                Object obj = new com.google.gson.JsonParser().parse(body);
-                String result = new com.google.gson.Gson().toJson(obj);
-                sendJson(exchange, "{\"success\":true,\"result\":\"" + escapeJson(result) + "\",\"message\":\"Minified successfully\"}");
+                Object obj = new JsonParser().parse(body);
+            String result = new Gson().toJson(obj);
+            sendJson(exchange, "{\"success\":true,\"result\":\"" + escapeJson(result) + "\",\"message\":\"Minified successfully\"}");
             } catch (Exception e) {
                 sendJson(exchange, "{\"success\":false,\"result\":null,\"message\":\"JSON format error: " + e.getMessage() + "\"}");
             }
@@ -142,15 +170,12 @@ public class SimpleServer {
 
     static class ConfigHandler implements HttpHandler {
         public void handle(HttpExchange exchange) throws IOException {
-            File configFile = new File("config.json");
-            if (!configFile.exists()) {
-                configFile = new File(System.getProperty("user.dir") + File.separator + "config.json");
-            }
+            File configFile = findConfigFile();
             
-            if (configFile.exists()) {
-                String content = new String(Files.readAllBytes(configFile.toPath()), StandardCharsets.UTF_8);
+            if (configFile != null) {
+                String content = readFileContent(configFile);
                 try {
-                    new com.google.gson.JsonParser().parse(content);
+                    new JsonParser().parse(content);
                     exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
                     exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
                     exchange.getResponseHeaders().set("Cache-Control", "no-cache, no-store, must-revalidate");
@@ -168,83 +193,6 @@ public class SimpleServer {
                 sendJson(exchange, defaultConfig);
             }
             exchange.close();
-        }
-    }
-
-    static class DbQueryHandler implements HttpHandler {
-        public void handle(HttpExchange exchange) throws IOException {
-            String body = readBody(exchange);
-            try {
-                Map<String, String> params = parseJsonParams(body);
-                
-                String host = params.get("host");
-                String portStr = params.get("port");
-                int port = Integer.parseInt(portStr != null ? portStr : "3306");
-                String database = params.get("database");
-                String username = params.get("username");
-                String password = params.get("password");
-                String sql = params.get("sql");
-                
-                if (sql == null || sql.trim().isEmpty()) {
-                    sendJson(exchange, "{\"success\":false,\"message\":\"Please enter SQL statement\"}");
-                    return;
-                }
-                
-                if (!sql.trim().toUpperCase().startsWith("SELECT")) {
-                    sendJson(exchange, "{\"success\":false,\"message\":\"Only SELECT statements are supported\"}");
-                    return;
-                }
-                
-                String url = String.format("jdbc:mysql://%s:%d/%s?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&characterEncoding=GBK", host, port, database);
-                
-                try (Connection conn = DriverManager.getConnection(url, username, password);
-                     Statement stmt = conn.createStatement();
-                     ResultSet rs = stmt.executeQuery(sql)) {
-                    
-                    ResultSetMetaData metaData = rs.getMetaData();
-                    int colCount = metaData.getColumnCount();
-                    List<String> columns = new ArrayList<>();
-                    for (int i = 1; i <= colCount; i++) {
-                        columns.add(metaData.getColumnName(i));
-                    }
-                    
-                    List<Map<String, String>> data = new ArrayList<>();
-                    while (rs.next()) {
-                        Map<String, String> row = new HashMap<>();
-                        for (String col : columns) {
-                            row.put(col, rs.getString(col));
-                        }
-                        data.add(row);
-                    }
-                    
-                    StringBuilder json = new StringBuilder();
-                    json.append("{\"success\":true,\"message\":\"Query successful\",\"columns\":[");
-                    for (int i = 0; i < columns.size(); i++) {
-                        if (i > 0) json.append(",");
-                        json.append("\"").append(escapeJson(columns.get(i))).append("\"");
-                    }
-                    json.append("],\"data\":[");
-                    for (int i = 0; i < data.size(); i++) {
-                        if (i > 0) json.append(",");
-                        json.append("{");
-                        Map<String, String> row = data.get(i);
-                        int j = 0;
-                        for (String col : columns) {
-                            if (j > 0) json.append(",");
-                            json.append("\"").append(escapeJson(col)).append("\":\"").append(escapeJson(row.get(col))).append("\"");
-                            j++;
-                        }
-                        json.append("}");
-                    }
-                    json.append("],\"rowCount\":").append(data.size()).append("}");
-                    
-                    sendJson(exchange, json.toString());
-                }
-            } catch (SQLException e) {
-                sendJson(exchange, "{\"success\":false,\"message\":\"" + escapeJson("Database connection or query failed: " + e.getMessage()) + "\"}");
-            } catch (Exception e) {
-                sendJson(exchange, "{\"success\":false,\"message\":\"" + escapeJson("Error: " + e.getMessage()) + "\"}");
-            }
         }
     }
 
@@ -306,7 +254,7 @@ public class SimpleServer {
     private static Map<String, String> parseJsonParams(String json) {
         Map<String, String> params = new HashMap<>();
         try {
-            com.google.gson.JsonObject obj = new com.google.gson.JsonParser().parse(json).getAsJsonObject();
+            JsonObject obj = new JsonParser().parse(json).getAsJsonObject();
             for (String key : obj.keySet()) {
                 params.put(key, obj.get(key).getAsString());
             }
@@ -314,5 +262,29 @@ public class SimpleServer {
             // ignore
         }
         return params;
+    }
+    
+    private static String readFileContent(File file) throws IOException {
+        InputStream is = new FileInputStream(file);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte[] buffer = new byte[1024];
+        int len;
+        while ((len = is.read(buffer)) != -1) {
+            baos.write(buffer, 0, len);
+        }
+        is.close();
+        return baos.toString("UTF-8");
+    }
+    
+    private static byte[] readFileBytes(File file) throws IOException {
+        InputStream is = new FileInputStream(file);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte[] buffer = new byte[1024];
+        int len;
+        while ((len = is.read(buffer)) != -1) {
+            baos.write(buffer, 0, len);
+        }
+        is.close();
+        return baos.toByteArray();
     }
 }

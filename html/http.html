@@ -185,6 +185,7 @@
       font-family: 'Courier New', monospace;
       font-size: 0.9rem;
       resize: vertical;
+      overflow: auto;
       transition: border-color 0.2s;
     }
 
@@ -273,6 +274,7 @@
       font-family: 'Courier New', monospace;
       font-size: 0.9rem;
       resize: vertical;
+      overflow: auto;
       background: #f8f9fa;
     }
 
@@ -319,7 +321,7 @@
         <div class="http-row">
           <select id="http-method">
             <option value="GET">GET</option>
-            <option value="POST">POST</option>
+            <option value="POST" selected>POST</option>
             <option value="PUT">PUT</option>
             <option value="DELETE">DELETE</option>
             <option value="PATCH">PATCH</option>
@@ -490,8 +492,10 @@
           } else {
             responseEl.value = result;
           }
+          autoSaveHttpFormData(); // Save response after setting
         } catch (e) {
           responseEl.value = result;
+          autoSaveHttpFormData(); // Save response after setting
         }
         
       } catch (error) {
@@ -500,6 +504,7 @@
         statusEl.className = 'error';
         timeEl.textContent = `Time: ${elapsed} ms`;
         responseEl.value = `Error: ${error.message}\n\nPlease ensure the URL is correct and the server is accessible.`;
+        autoSaveHttpFormData(); // Save error response
       }
     }
 
@@ -548,6 +553,39 @@
       loadSavedHttpRequest();
     }
 
+    // Auto-save form data
+    function autoSaveHttpFormData() {
+      const formData = {
+        method: document.getElementById('http-method').value,
+        url: document.getElementById('http-url').value,
+        headers: document.getElementById('http-headers').value,
+        body: document.getElementById('http-body').value,
+        response: document.getElementById('http-response').value,
+        status: document.getElementById('http-status').textContent,
+        time: document.getElementById('http-time').textContent
+      };
+      localStorage.setItem('httpFormData', JSON.stringify(formData));
+    }
+
+    // Load auto-saved form data
+    function loadHttpFormData() {
+      const saved = localStorage.getItem('httpFormData');
+      if (saved) {
+        try {
+          const formData = JSON.parse(saved);
+          document.getElementById('http-method').value = formData.method || 'POST';
+          document.getElementById('http-url').value = formData.url || '';
+          document.getElementById('http-headers').value = formData.headers || '';
+          document.getElementById('http-body').value = formData.body || '';
+          document.getElementById('http-response').value = formData.response || '';
+          document.getElementById('http-status').textContent = formData.status || 'Status: --';
+          document.getElementById('http-time').textContent = formData.time || 'Time: -- ms';
+        } catch (e) {
+          console.error('Failed to load form data:', e);
+        }
+      }
+    }
+
     function loadSavedHttpRequest() {
       const saved = localStorage.getItem('savedHttpRequest');
       
@@ -578,14 +616,15 @@
         const response = await fetch('/api/config?' + Date.now());
         const config = await response.json();
         
+        // Only load config if fields are empty (user hasn't entered anything yet)
         if (config.http) {
-          if (config.http.defaultUrl) {
+          if (config.http.defaultUrl && !document.getElementById('http-url').value) {
             document.getElementById('http-url').value = config.http.defaultUrl;
           }
-          if (config.http.defaultHeaders) {
+          if (config.http.defaultHeaders && !document.getElementById('http-headers').value) {
             document.getElementById('http-headers').value = config.http.defaultHeaders;
           }
-          if (config.http.defaultBody) {
+          if (config.http.defaultBody && !document.getElementById('http-body').value) {
             let body = config.http.defaultBody;
             // Replace {{timestamp}} with actual timestamp
             body = body.replace(/\{\{timestamp\}\}/g, Date.now().toString());
@@ -597,9 +636,22 @@
       }
     }
 
-    // Initialize - load config first, then saved request (saved request takes priority)
-    loadHttpConfig();
-    loadSavedHttpRequest();
+    // Add event listeners to auto-save form data
+    document.addEventListener('DOMContentLoaded', function() {
+      const inputs = ['http-method', 'http-url', 'http-headers', 'http-body'];
+      inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('input', autoSaveHttpFormData);
+          el.addEventListener('change', autoSaveHttpFormData);
+        }
+      });
+      
+      // Load saved form data first, then config, then saved request
+      loadHttpFormData();
+      loadHttpConfig();
+      loadSavedHttpRequest();
+    });
   </script>
 </body>
 </html>

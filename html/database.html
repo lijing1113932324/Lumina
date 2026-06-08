@@ -165,6 +165,7 @@
       font-family: 'Courier New', monospace;
       font-size: 0.9rem;
       resize: vertical;
+      overflow: auto;
       transition: border-color 0.2s;
     }
 
@@ -391,35 +392,115 @@ Example: SELECT * FROM users LIMIT 10"></textarea>
     let queryResultData = null;
     let queryResultColumns = null;
 
+    // Save form data to localStorage
+    function saveFormData() {
+      const formData = {
+        dbHost: document.getElementById('db-host').value,
+        dbPort: document.getElementById('db-port').value,
+        dbName: document.getElementById('db-name').value,
+        dbUser: document.getElementById('db-user').value,
+        dbPassword: document.getElementById('db-password').value,
+        sqlInput: document.getElementById('sql-input').value,
+        queryResult: queryResultData,
+        queryColumns: queryResultColumns
+      };
+      localStorage.setItem('databaseFormData', JSON.stringify(formData));
+    }
+
+    // Load form data from localStorage
+    function loadFormData() {
+      const saved = localStorage.getItem('databaseFormData');
+      if (saved) {
+        try {
+          const formData = JSON.parse(saved);
+          document.getElementById('db-host').value = formData.dbHost || '';
+          document.getElementById('db-port').value = formData.dbPort || '';
+          
+          // Set database select value
+          const dbName = formData.dbName;
+          if (dbName) {
+            const dbSelect = document.getElementById('db-name');
+            const option = dbSelect.querySelector(`option[value="${dbName}"]`);
+            if (option) {
+              option.selected = true;
+            }
+          }
+          
+          document.getElementById('db-user').value = formData.dbUser || '';
+          document.getElementById('db-password').value = formData.dbPassword || '';
+          document.getElementById('sql-input').value = formData.sqlInput || '';
+          
+          // Load saved query result
+          if (formData.queryResult && formData.queryColumns) {
+            queryResultData = formData.queryResult;
+            queryResultColumns = formData.queryColumns;
+            displayResult(formData.queryResult, formData.queryColumns);
+          }
+        } catch (e) {
+          console.error('Failed to load form data:', e);
+        }
+      }
+    }
+
+    // Add event listeners to save form data on input
+    document.addEventListener('DOMContentLoaded', function() {
+      const inputs = ['db-host', 'db-port', 'db-name', 'db-user', 'db-password', 'sql-input'];
+      inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('input', saveFormData);
+          el.addEventListener('change', saveFormData);
+        }
+      });
+      
+      // Load config first (creates database options), then form data
+      loadConfig().then(() => {
+        loadFormData();
+      });
+    });
+
     async function loadConfig() {
       try {
         const response = await fetch('/api/config?' + Date.now());
         const config = await response.json();
         
+        // Only load config if fields are empty (user hasn't entered anything yet)
         if (config.connection) {
-          document.getElementById('db-host').value = config.connection.host || 'localhost';
-          document.getElementById('db-port').value = config.connection.port || 3306;
-          document.getElementById('db-user').value = config.connection.username || '';
-          document.getElementById('db-password').value = config.connection.password || '';
+          if (!document.getElementById('db-host').value) {
+            document.getElementById('db-host').value = config.connection.host || 'localhost';
+          }
+          if (!document.getElementById('db-port').value) {
+            document.getElementById('db-port').value = config.connection.port || 3306;
+          }
+          if (!document.getElementById('db-user').value) {
+            document.getElementById('db-user').value = config.connection.username || '';
+          }
+          if (!document.getElementById('db-password').value) {
+            document.getElementById('db-password').value = config.connection.password || '';
+          }
         }
         
         if (config.connection && config.connection.databases && Array.isArray(config.connection.databases)) {
           databaseConfigs = config.connection.databases;
           
           const dbSelect = document.getElementById('db-name');
+          const currentDbValue = dbSelect.value;
           dbSelect.innerHTML = '';
           
           config.connection.databases.forEach((db, index) => {
             const option = document.createElement('option');
             option.value = db.name;
             option.textContent = db.name;
-            if (index === 0) {
+            if (currentDbValue && currentDbValue === db.name) {
+              option.selected = true;
+            } else if (index === 0 && !currentDbValue) {
               option.selected = true;
             }
             dbSelect.appendChild(option);
           });
           
-          if (config.connection.databases.length > 0) {
+          // Only load example SQL if SQL input is empty
+          if (config.connection.databases.length > 0 && !document.getElementById('sql-input').value) {
             const firstDb = config.connection.databases[0];
             if (firstDb.exampleSql) {
               document.getElementById('sql-input').value = firstDb.exampleSql;
@@ -481,6 +562,7 @@ Example: SELECT * FROM users LIMIT 10"></textarea>
         
         if (data.success) {
           displayResult(data.data, data.columns);
+          saveFormData(); // Save query result
         } else {
           showError(data.message || 'Query failed');
         }
@@ -560,12 +642,13 @@ Example: SELECT * FROM users LIMIT 10"></textarea>
         return;
       }
       
-      // Build key-value string for this row
-      let rowText = '';
+      // Build JSON object for this row
+      const rowObj = {};
       columns.forEach(col => {
-        const value = row[col] !== null ? row[col] : 'NULL';
-        rowText += `${col}: ${value}\n`;
+        rowObj[col] = row[col] !== null ? row[col] : null;
       });
+      
+      const rowText = JSON.stringify(rowObj, null, 2);
       
       navigator.clipboard.writeText(rowText).then(() => {
         // Find the copy button for this row and show feedback
@@ -673,10 +756,9 @@ Example: SELECT * FROM users LIMIT 10"></textarea>
       table.style.display = 'none';
       empty.style.display = 'block';
       message.style.display = 'none';
+      
+      // Clear localStorage
+      localStorage.removeItem('databaseFormData');
     }
-
-    // Load config on page load
-    loadConfig();
   </script>
-</body>
 </html>

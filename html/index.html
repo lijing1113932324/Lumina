@@ -194,6 +194,7 @@
       font-family: 'Consolas', 'Monaco', monospace;
       font-size: 0.9rem;
       resize: vertical;
+      overflow: auto;
       transition: border-color 0.2s;
     }
 
@@ -835,6 +836,7 @@
         output.value = JSON.stringify(parsed, null, 2);
         successDiv.classList.add('show');
         document.getElementById('json-input').classList.remove('error');
+        saveJsonFormData(); // Save after formatting
       } catch (err) {
         errorDiv.textContent = 'JSON format error: ' + err.message;
         errorDiv.classList.add('show');
@@ -862,6 +864,7 @@
         output.value = JSON.stringify(parsed);
         successDiv.classList.add('show');
         document.getElementById('json-input').classList.remove('error');
+        saveJsonFormData(); // Save after minifying
       } catch (err) {
         errorDiv.textContent = 'JSON format error: ' + err.message;
         errorDiv.classList.add('show');
@@ -875,7 +878,48 @@
       document.getElementById('json-error').classList.remove('show');
       document.getElementById('json-success').classList.remove('show');
       document.getElementById('json-input').classList.remove('error');
+      
+      // Clear localStorage
+      localStorage.removeItem('jsonFormData');
     }
+
+    // Save JSON form data to localStorage
+    function saveJsonFormData() {
+      const formData = {
+        input: document.getElementById('json-input').value,
+        output: document.getElementById('json-output').value
+      };
+      localStorage.setItem('jsonFormData', JSON.stringify(formData));
+    }
+
+    // Load JSON form data from localStorage
+    function loadJsonFormData() {
+      const saved = localStorage.getItem('jsonFormData');
+      if (saved) {
+        try {
+          const formData = JSON.parse(saved);
+          document.getElementById('json-input').value = formData.input || '';
+          document.getElementById('json-output').value = formData.output || '';
+        } catch (e) {
+          console.error('Failed to load form data:', e);
+        }
+      }
+    }
+
+    // Add event listeners to auto-save form data
+    document.addEventListener('DOMContentLoaded', function() {
+      const inputs = ['json-input', 'json-output'];
+      inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('input', saveJsonFormData);
+          el.addEventListener('change', saveJsonFormData);
+        }
+      });
+      
+      // Load saved form data
+      loadJsonFormData();
+    });
 
     function formatJsonOutput(text) {
       try {

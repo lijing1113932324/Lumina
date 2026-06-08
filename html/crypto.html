@@ -125,6 +125,7 @@
       font-family: 'Monaco', 'Menlo', monospace;
       font-size: 0.9rem;
       resize: vertical;
+      overflow: auto;
       transition: border-color 0.3s ease;
     }
 
@@ -271,6 +272,7 @@
         const result = await response.json();
         if (result.success) {
           document.getElementById('crypto-result').value = formatJsonOutput(result.result);
+          saveCryptoFormData(); // Save after setting result
         } else {
           alert('Encryption failed');
         }
@@ -295,6 +297,7 @@
         const result = await response.json();
         if (result.success) {
           document.getElementById('crypto-result').value = formatJsonOutput(result.result);
+          saveCryptoFormData(); // Save after setting result
         } else {
           alert('Decryption failed');
         }
@@ -308,7 +311,47 @@
       document.getElementById('crypto-result').value = '';
       document.getElementById('crypto-error').classList.remove('show');
       document.getElementById('crypto-success').classList.remove('show');
+      
+      // Clear localStorage
+      localStorage.removeItem('cryptoFormData');
     }
+
+    // Save form data to localStorage
+    function saveCryptoFormData() {
+      const formData = {
+        input: document.getElementById('crypto-input').value,
+        result: document.getElementById('crypto-result').value
+      };
+      localStorage.setItem('cryptoFormData', JSON.stringify(formData));
+    }
+
+    // Load form data from localStorage
+    function loadCryptoFormData() {
+      const saved = localStorage.getItem('cryptoFormData');
+      if (saved) {
+        try {
+          const formData = JSON.parse(saved);
+          document.getElementById('crypto-input').value = formData.input || '';
+          document.getElementById('crypto-result').value = formData.result || '';
+        } catch (e) {
+          console.error('Failed to load form data:', e);
+        }
+      }
+    }
+
+    // Add event listeners to auto-save form data
+    document.addEventListener('DOMContentLoaded', function() {
+      const inputs = ['crypto-input', 'crypto-result'];
+      inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('input', saveCryptoFormData);
+        }
+      });
+      
+      // Load saved form data
+      loadCryptoFormData();
+    });
 
     function formatJsonOutput(text) {
       try {

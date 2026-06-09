@@ -19,8 +19,21 @@
     ]
   },
   "http": {
-    "defaultUrl": "http://10.201.42.25:8082/mjc/webtrans/trade",
-    "defaultHeaders": "{\"Content-Type\": \"application/json\"}",
-    "defaultBody": "{\"query\": \"Hello World\", \"timestamp\": \"{{timestamp}}\", \"data\": {\"key1\": \"value1\", \"key2\": [1, 2, 3]}}"
+    "requests": [
+      {
+        "name": "POST API",
+        "url": "https://postman-echo.com/post",
+        "method": "POST",
+        "headers": "{\"Content-Type\": \"application/json\"}",
+        "body": "{\"method\":\"POST\",\"url\":\"/test\",\"body\":\"hello\"}"
+      },
+      {
+        "name": "Weather API",
+        "url": "https://api.open-meteo.com/v1/forecast?latitude=31.23&longitude=121.47&hourly=rain",
+        "method": "GET",
+        "headers": "{\"Content-Type\": \"application/json\", \"Authorization\": \"Bearer token\"}",
+        "body": ""
+      }
+    ]
   }
 }

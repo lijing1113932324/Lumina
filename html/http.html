@@ -196,7 +196,7 @@
     }
 
     .http-body textarea {
-      height: 120px;
+      height: 200px;
       font-family: 'Consolas', 'Monaco', monospace;
     }
 
@@ -326,7 +326,12 @@
             <option value="DELETE">DELETE</option>
             <option value="PATCH">PATCH</option>
           </select>
-          <input type="text" id="http-url" placeholder="https://api.example.com/endpoint" />
+          <div style="flex: 1; position: relative;">
+            <input type="text" id="http-url" placeholder="https://api.example.com/endpoint" style="width: 100%;" />
+            <select id="request-select" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
+              <option value="" selected>Select a saved request...</option>
+            </select>
+          </div>
         </div>
         <div class="http-headers">
           <label>Headers (JSON format)</label>
@@ -616,8 +621,30 @@
         const response = await fetch('/api/config?' + Date.now());
         const config = await response.json();
         
-        // Only load config if fields are empty (user hasn't entered anything yet)
-        if (config.http) {
+        if (config.http && config.http.requests && Array.isArray(config.http.requests)) {
+          const select = document.getElementById('request-select');
+          // Clear existing options except the first one
+          while (select.options.length > 1) {
+            select.remove(1);
+          }
+          
+          // Add saved requests to dropdown
+          config.http.requests.forEach((req, index) => {
+            const option = document.createElement('option');
+            option.value = index.toString();
+            const name = req.name || `Request ${index + 1}`;
+            option.textContent = `${name}: ${req.url}`;
+            select.appendChild(option);
+          });
+          
+          // Load first request as default if no data entered yet
+          if (config.http.requests.length > 0) {
+            if (!document.getElementById('http-url').value && !document.getElementById('http-headers').value && !document.getElementById('http-body').value) {
+              loadRequest(config.http.requests[0]);
+            }
+          }
+        } else if (config.http) {
+          // Legacy config format
           if (config.http.defaultUrl && !document.getElementById('http-url').value) {
             document.getElementById('http-url').value = config.http.defaultUrl;
           }
@@ -626,13 +653,29 @@
           }
           if (config.http.defaultBody && !document.getElementById('http-body').value) {
             let body = config.http.defaultBody;
-            // Replace {{timestamp}} with actual timestamp
             body = body.replace(/\{\{timestamp\}\}/g, Date.now().toString());
             document.getElementById('http-body').value = body;
           }
         }
       } catch (error) {
         console.log('Cannot load config file:', error);
+      }
+    }
+
+    function loadRequest(request) {
+      if (request.method) {
+        document.getElementById('http-method').value = request.method;
+      }
+      if (request.url) {
+        document.getElementById('http-url').value = request.url;
+      }
+      if (request.headers) {
+        document.getElementById('http-headers').value = request.headers;
+      }
+      if (request.body) {
+        let body = request.body;
+        body = body.replace(/\{\{timestamp\}\}/g, Date.now().toString());
+        document.getElementById('http-body').value = body;
       }
     }
 
@@ -646,6 +689,25 @@
           el.addEventListener('change', autoSaveHttpFormData);
         }
       });
+      
+      // Request select change handler
+      const requestSelect = document.getElementById('request-select');
+      if (requestSelect) {
+        requestSelect.addEventListener('change', async function() {
+          const index = parseInt(this.value);
+          if (!isNaN(index)) {
+            try {
+              const response = await fetch('/api/config?' + Date.now());
+              const config = await response.json();
+              if (config.http && config.http.requests && config.http.requests[index]) {
+                loadRequest(config.http.requests[index]);
+              }
+            } catch (error) {
+              console.error('Failed to load request:', error);
+            }
+          }
+        });
+      }
       
       // Load saved form data first, then config, then saved request
       loadHttpFormData();

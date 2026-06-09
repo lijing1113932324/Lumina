@@ -51,8 +51,10 @@ public class HttpProxyServer {
                 
                 if (!method.equals("GET") && !method.equals("DELETE")) {
                     connection.setDoOutput(true);
+                    // POST请求时先加密请求体
+                    String encryptedBody = encrypt(requestBody);
                     try (OutputStream os = connection.getOutputStream()) {
-                        byte[] input = requestBody.getBytes(StandardCharsets.UTF_8);
+                        byte[] input = encryptedBody.getBytes(StandardCharsets.UTF_8);
                         os.write(input, 0, input.length);
                     }
                 }
@@ -90,6 +92,18 @@ public class HttpProxyServer {
         private String decrypt(String encryptedJson) {
             // TODO: 实现你的解密逻辑
             return encryptedJson;
+        }
+        
+        private String encrypt(String plainJson) {
+            // TODO: 实现你的加密逻辑
+            // 示例：Base64 编码（请替换为你的实际加密算法）
+            if (plainJson == null || plainJson.isEmpty()) {
+                return plainJson;
+            }
+            // 这里是加密逻辑占位符，请根据你的加密算法实现
+            // 例如：AES加密、自定义加密等
+            // 以下是示例代码（使用Base64作为演示）
+            return plainJson;
         }
         
         private void sendJson(HttpExchange exchange, String json) throws IOException {

@@ -1,0 +1,39 @@
+{
+  "server": {
+    "port": 8080
+  },
+  "connection": {
+    "host": "mysql.w3cschool.cn",
+    "port": 3306,
+    "username": "w3ctest",
+    "password": "w3c123654",
+    "databases": [
+      {
+        "name": "test_db",
+        "exampleSql": "select 1 as test"
+      },
+      {
+        "name": "ipbatdb",
+        "exampleSql": "select * from tbl_ipbat_role_inf limit 10"
+      }
+    ]
+  },
+  "http": {
+    "requests": [
+      {
+        "name": "POST API",
+        "url": "https://postman-echo.com/post",
+        "method": "POST",
+        "headers": "{\"Content-Type\": \"application/json\"}",
+        "body": "{\"method\":\"POST\",\"url\":\"/test\",\"body\":\"hello\"}"
+      },
+      {
+        "name": "Weather API",
+        "url": "https://api.open-meteo.com/v1/forecast?latitude=31.23&longitude=121.47&hourly=rain",
+        "method": "GET",
+        "headers": "{\"Content-Type\": \"application/json\", \"Authorization\": \"Bearer token\"}",
+        "body": ""
+      }
+    ]
+  }
+}
